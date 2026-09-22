@@ -2,10 +2,29 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MultiMaterial } from '@babylonjs/core/Materials/multiMaterial';
 import { PBRBaseMaterial } from '@babylonjs/core/Materials/PBR/pbrBaseMaterial';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { DitheredTileFadeMaterialPlugin } from '@babylonjs/core/Materials/ditheredTileFadeMaterialPlugin';
+import * as Materials from '@babylonjs/core/Materials/index.js';
 
 const MESH_OWNERS = new WeakMap();
 const PLUGIN_OWNERS = new WeakMap();
+
+export function getDitheredTileFadeMaterialPlugin( materials = Materials ) {
+
+	const plugin = materials[ 'DitheredTileFadeMaterialPlugin' ];
+	const prototype = plugin?.prototype;
+	if (
+		typeof plugin?.GetOrCreate !== 'function' ||
+		typeof prototype?.getFadeBoundsToRef !== 'function' ||
+		typeof prototype?.setFadeBounds !== 'function' ||
+		typeof prototype?.resetFade !== 'function'
+	) {
+
+		return null;
+
+	}
+
+	return plugin;
+
+}
 
 function getRenderableMeshes( root ) {
 
@@ -56,9 +75,16 @@ function validateMesh( mesh, materials ) {
 
 export class FadeMaterialManager {
 
-	constructor() {
+	constructor( ditheredTileFadeMaterialPlugin = getDitheredTileFadeMaterialPlugin() ) {
 
 		this._scenes = new Map();
+		this._ditheredTileFadeMaterialPlugin = ditheredTileFadeMaterialPlugin;
+
+	}
+
+	get supported() {
+
+		return this._ditheredTileFadeMaterialPlugin !== null;
 
 	}
 
@@ -104,7 +130,7 @@ export class FadeMaterialManager {
 			MESH_OWNERS.set( mesh, this );
 			for ( const material of materials ) {
 
-				const plugin = DitheredTileFadeMaterialPlugin.GetOrCreate( material );
+				const plugin = this._ditheredTileFadeMaterialPlugin.GetOrCreate( material );
 				const previousBounds = { lowerBound: 0, upperBound: 1 };
 				const hadPreviousBounds = plugin.getFadeBoundsToRef( mesh, previousBounds );
 

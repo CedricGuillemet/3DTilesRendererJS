@@ -93,8 +93,8 @@
     "@babel/preset-modules": "^0.1.6",
     "@babel/preset-react": "^7.26.3",
     "@babel/preset-typescript": "^7.26.0",
-    "@babylonjs/core": "9.26.1",
-    "@babylonjs/loaders": "9.26.1",
+    "@babylonjs/core": "^9.26.1",
+    "@babylonjs/loaders": "^9.26.1",
     "@eslint/js": "^9.0.0",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
@@ -123,8 +123,8 @@
     "vitest": "^4.0.15"
   },
   "peerDependencies": {
-    "@babylonjs/core": ">=9.26.1",
-    "@babylonjs/loaders": ">=9.26.1",
+    "@babylonjs/core": ">=8.0.0",
+    "@babylonjs/loaders": ">=8.0.0",
     "@react-three/fiber": "^8.17.9 || ^9.0.0",
     "react": "^18.3.1 || ^19.0.0",
     "react-dom": "^18.3.1 || ^19.0.0",

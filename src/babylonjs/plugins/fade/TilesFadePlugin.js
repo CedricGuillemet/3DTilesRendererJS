@@ -38,6 +38,19 @@ function cameraMovedFast( previous, current ) {
 
 }
 
+/**
+ * Plugin that overrides Babylon.js material shaders to fade tile geometry in and out as
+ * tile LODs change, preventing pop-in. Dispatches `fade-change`, `fade-start`, and
+ * `fade-end` events on the `TilesRenderer` during animation for on-demand rendering.
+ *
+ * Fading uses the `DitheredTileFadeMaterialPlugin` API available in Babylon.js 9.26.1
+ * and later. With an older compatible Babylon.js version, registration warns once and
+ * gracefully leaves normal, non-fading tile rendering unchanged.
+ * @param {Object} [options]
+ * @param {number} [options.fadeDuration=250] Time in milliseconds for a tile to fully fade in or out.
+ * @param {number} [options.maximumFadeOutTiles=50] Maximum simultaneous fade-out tiles. If exceeded, tiles pop instead of fading.
+ * @param {boolean} [options.fadeRootTiles=false] Whether root-level tiles fade in on their first appearance.
+ */
 export class TilesFadePlugin extends TilesFadePluginBase {
 
 	constructor( options ) {
@@ -46,16 +59,38 @@ export class TilesFadePlugin extends TilesFadePluginBase {
 		this._fadeMaterialManager = new FadeMaterialManager();
 		this._previousCamera = null;
 		this._previousCameraMatrix = null;
+		this._initialized = false;
+		this._warnedUnsupported = false;
 
 	}
 
 	init( tiles ) {
+
+		if ( ! this._fadeMaterialManager.supported ) {
+
+			if ( ! this._warnedUnsupported ) {
+
+				console.warn( 'TilesFadePlugin: Babylon.js tile fading is unavailable because the required DitheredTileFadeMaterialPlugin API is absent. Tiles will render normally without fading.' );
+				this._warnedUnsupported = true;
+
+			}
+
+			return;
+
+		}
 
 		const camera = tiles.scene.activeCamera;
 		const cameraMatrix = getCameraMatrix( camera );
 		this._previousCamera = camera;
 		this._previousCameraMatrix = cameraMatrix ? cameraMatrix.clone() : null;
 		super.init( tiles );
+		this._initialized = true;
+
+	}
+
+	setTileVisible( tile, visible ) {
+
+		return this._initialized ? super.setTileVisible( tile, visible ) : false;
 
 	}
 
@@ -98,7 +133,13 @@ export class TilesFadePlugin extends TilesFadePluginBase {
 
 	dispose() {
 
-		super.dispose();
+		if ( this._initialized ) {
+
+			super.dispose();
+			this._initialized = false;
+
+		}
+
 		this._fadeMaterialManager.dispose();
 		this._previousCamera = null;
 		this._previousCameraMatrix = null;
