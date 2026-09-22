@@ -46,6 +46,7 @@ function cameraMovedFast( previous, current ) {
  * Fading uses the `DitheredTileFadeMaterialPlugin` API available in Babylon.js 9.26.1
  * and later. With an older compatible Babylon.js version, registration warns once and
  * gracefully leaves normal, non-fading tile rendering unchanged.
+ * Tiles containing unsupported materials or instances also render without fading.
  * @param {Object} [options]
  * @param {number} [options.fadeDuration=250] Time in milliseconds for a tile to fully fade in or out.
  * @param {number} [options.maximumFadeOutTiles=50] Maximum simultaneous fade-out tiles. If exceeded, tiles pop instead of fading.
@@ -90,7 +91,13 @@ export class TilesFadePlugin extends TilesFadePluginBase {
 
 	setTileVisible( tile, visible ) {
 
-		return this._initialized ? super.setTileVisible( tile, visible ) : false;
+		if ( ! this._initialized || ! this._fadeMaterialManager.isSceneSupported( tile.engineData?.scene ) ) {
+
+			return false;
+
+		}
+
+		return super.setTileVisible( tile, visible );
 
 	}
 

@@ -4,7 +4,6 @@ import { PBRBaseMaterial } from '@babylonjs/core/Materials/PBR/pbrBaseMaterial';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import * as Materials from '@babylonjs/core/Materials/index.js';
 
-const MESH_OWNERS = new WeakMap();
 const PLUGIN_OWNERS = new WeakMap();
 
 export function getDitheredTileFadeMaterialPlugin( materials = Materials ) {
@@ -28,7 +27,7 @@ export function getDitheredTileFadeMaterialPlugin( materials = Materials ) {
 
 function getRenderableMeshes( root ) {
 
-	const meshes = root instanceof Mesh ? [ root ] : [];
+	const meshes = root instanceof Mesh || root.getClassName() === 'InstancedMesh' ? [ root ] : [];
 	return meshes.concat( root.getChildMeshes( false ) );
 
 }
@@ -47,11 +46,11 @@ function getLeafMaterials( mesh ) {
 
 }
 
-function validateMesh( mesh, materials ) {
+function getUnsupportedReason( mesh, materials ) {
 
 	if ( mesh.getClassName() === 'InstancedMesh' || mesh.hasThinInstances || mesh.instances?.length ) {
 
-		throw new Error( `TilesFadePlugin: Mesh "${ mesh.name }" uses unsupported Babylon instances.` );
+		return `Mesh "${ mesh.name }" uses unsupported Babylon instances.`;
 
 	}
 
@@ -59,13 +58,13 @@ function validateMesh( mesh, materials ) {
 
 		if ( ! ( material instanceof StandardMaterial || material instanceof PBRBaseMaterial ) ) {
 
-			throw new Error( `TilesFadePlugin: Mesh "${ mesh.name }" uses unsupported material "${ material.name }" (${ material.getClassName() }).` );
+			return `Mesh "${ mesh.name }" uses unsupported material "${ material.name }" (${ material.getClassName() }).`;
 
 		}
 
 		if ( material.alpha < 1 || material.needAlphaBlendingForMesh( mesh ) ) {
 
-			throw new Error( `TilesFadePlugin: Mesh "${ mesh.name }" uses alpha blending, but tile fading currently supports opaque materials only.` );
+			return `Mesh "${ mesh.name }" uses alpha blending, but tile fading currently supports opaque materials only.`;
 
 		}
 
@@ -85,6 +84,12 @@ export class FadeMaterialManager {
 	get supported() {
 
 		return this._ditheredTileFadeMaterialPlugin !== null;
+
+	}
+
+	isSceneSupported( scene ) {
+
+		return this._scenes.get( scene )?.length > 0;
 
 	}
 
@@ -112,11 +117,12 @@ export class FadeMaterialManager {
 
 			}
 
-			validateMesh( mesh, materials );
-			const owner = MESH_OWNERS.get( mesh );
-			if ( owner && owner !== this ) {
+			const reason = getUnsupportedReason( mesh, materials );
+			if ( reason ) {
 
-				throw new Error( `TilesFadePlugin: Mesh "${ mesh.name }" is already controlled by another fade manager.` );
+				console.warn( `TilesFadePlugin: ${ reason } This tile will render normally without fading.` );
+				this._scenes.set( scene, [] );
+				return;
 
 			}
 
@@ -127,7 +133,6 @@ export class FadeMaterialManager {
 		const records = [];
 		for ( const { mesh, materials } of candidates ) {
 
-			MESH_OWNERS.set( mesh, this );
 			for ( const material of materials ) {
 
 				const plugin = this._ditheredTileFadeMaterialPlugin.GetOrCreate( material );
@@ -217,8 +222,6 @@ export class FadeMaterialManager {
 				plugin.resetFade( mesh );
 
 			}
-
-			MESH_OWNERS.delete( mesh );
 
 			const pluginOwners = PLUGIN_OWNERS.get( plugin );
 			pluginOwners.count --;

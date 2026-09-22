@@ -22,6 +22,10 @@ meshes using opaque `StandardMaterial` or PBR materials, including
 instances, batching, and standalone shadow, depth, picking, outline, or custom
 passes are not included.
 
+If a tile contains transparent or unsupported materials, or unsupported instances,
+the plugin logs a warning and renders the entire tile without fading. Its normal
+visibility timing is preserved, and supported tiles continue to fade.
+
 The default `maximumFadeOutTiles` value is 50. As in the Three.js
 implementation, exceeding it completes fades early only while the camera moves
 more than 0.1 world units or rotates more than 0.25 radians in one frame; it is
